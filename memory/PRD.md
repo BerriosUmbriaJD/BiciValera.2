@@ -22,11 +22,17 @@ BiciValera es un sistema inteligente de bicicletas compartidas para Valera, Esta
 - Auth JWT completo (register/login/me) + guard de navegación.
 - Estaciones + detalle con selección de bici y `POST /rides/start`.
 - Ciclo de viaje: start → active (1 activo por usuario) → end (distancia/CO₂ calculados) → historial.
-- Impacto (usuario + ciudad) y Simulador en vivo (poll cada 4s en mapa).
-- Mapa custom canvas con marcadores proyectados por lat/lon + bicis simuladas en movimiento.
-- Unlock modal con escáner simulado + entrada manual de código.
+- Impacto (usuario + ciudad) y Simulador en vivo.
+- Unlock modal con escáner simulado + entrada manual.
 - Perfil con estado de flota en vivo y cerrar sesión.
-- Testing: backend 12/12 pytest, frontend flujo completo verificado.
+
+## Implemented (2026-07-15) — Paquete de mejoras integral
+- **Modo oscuro**: `ThemeProvider` con paletas light/dark + selector Claro/Oscuro/Sistema en Perfil (persistente).
+- **Mapa real (Leaflet/OpenStreetMap)**: calles reales de Valera, tiles Voyager (claro) / dark (oscuro), cross-platform (iframe web + react-native-webview móvil).
+- **Rutas reales sobre calles** vía OSRM y **bicis que se mueven coherentemente** a lo largo de las rutas.
+- **Ubicación del usuario** (expo-location, permisos contextuales) + marcador + estación más cercana + FAB de recentrado.
+- **Gráfico de tendencia** CO₂ 7 días (react-native-gifted-charts) y **logros/insignias** (8) en Impacto — endpoints `/api/impact/trend` y `/api/achievements`.
+- Animaciones de entrada (reanimated). Testing: backend 16/16 pytest, frontend completo verificado.
 
 ## Backlog
 - **P1:** Reserva de bici por tiempo; filtros de tipo de bici en el mapa; tarifa/costo del viaje.
