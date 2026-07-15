@@ -161,3 +161,56 @@ def test_simulator(session):
         assert k in body
     assert body["total_bikes"] > 0
     assert body["stations"] > 0
+
+
+# --- NEW: Impact trend (7-day CO2 history) ---
+def test_impact_trend_unauth(session):
+    r = session.get(f"{API}/impact/trend", timeout=30)
+    assert r.status_code == 401
+
+
+def test_impact_trend_ok(session, auth_headers):
+    r = session.get(f"{API}/impact/trend", headers=auth_headers, timeout=30)
+    assert r.status_code == 200
+    body = r.json()
+    assert "days" in body
+    days = body["days"]
+    assert isinstance(days, list) and len(days) == 7
+    for d in days:
+        for k in ["date", "label", "km", "co2", "rides"]:
+            assert k in d, f"missing {k} in day {d}"
+        assert isinstance(d["km"], (int, float))
+        assert isinstance(d["co2"], (int, float))
+        assert isinstance(d["rides"], int)
+        assert d["label"] in ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+    # last day is today
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).date().isoformat()
+    assert days[-1]["date"] == today
+    # ride flow ran earlier -> today's rides should reflect >=1 completed
+    assert days[-1]["rides"] >= 1
+    assert days[-1]["co2"] > 0
+
+
+# --- NEW: Achievements ---
+def test_achievements_unauth(session):
+    r = session.get(f"{API}/achievements", timeout=30)
+    assert r.status_code == 401
+
+
+def test_achievements_ok(session, auth_headers):
+    r = session.get(f"{API}/achievements", headers=auth_headers, timeout=30)
+    assert r.status_code == 200
+    body = r.json()
+    assert "achievements" in body and "unlocked" in body and "total" in body
+    achv = body["achievements"]
+    assert isinstance(achv, list) and len(achv) == body["total"] and body["total"] == 8
+    for a in achv:
+        for k in ["id", "name", "desc", "icon", "goal", "progress", "current", "unlocked"]:
+            assert k in a
+        assert isinstance(a["unlocked"], bool)
+        assert a["progress"] <= a["goal"]
+    # After ride flow, first_ride should be unlocked
+    first = next((a for a in achv if a["id"] == "first_ride"), None)
+    assert first is not None and first["unlocked"] is True
+    assert body["unlocked"] >= 1

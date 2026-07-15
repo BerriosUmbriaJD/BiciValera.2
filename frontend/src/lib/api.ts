@@ -35,5 +35,7 @@ export const api = {
   rides: () => request("/rides"),
   activeRide: () => request("/rides/active"),
   impact: () => request("/impact"),
+  impactTrend: () => request("/impact/trend"),
+  achievements: () => request("/achievements"),
   simulator: () => request("/simulator", {}, false),
 };

@@ -1,0 +1,34 @@
+{
+  "summary": "BiciValera iteration-2 upgrades verified end-to-end. Backend: 16/16 pytest passing including 4 new tests for /api/impact/trend (7-day CO2 window, correct labels/date, today>=1 ride) and /api/achievements (8 achievements, unlocked/progress/goal, first_ride unlocked after ride flow). Regression: auth register/login/me, stations list+detail+404, rides start (single active enforced) + end + history, impact, simulator - all pass. Frontend mobile flows verified as demo@valera.com: (1) Impact screen renders co2-hero-card, 4-metric grid, trend-chart (BarChart with 7 bars + rules), Logros header with unlocked/total counter and 8 achievement-* cards (first_ride/five_rides/ten_rides/ten_km/fifty_km/co2_1/co2_5/electric); (2) Profile theme-selector shows theme-light/theme-dark/theme-system - tapping theme-dark switches bg from rgb(249,250,249) to rgb(14,22,17) app-wide (Impact bg also becomes dark), and after full page reload the dark mode persists (rgb(14,22,17)) confirming AsyncStorage persistence; (3) Map tab renders a real Leaflet map inside iframe (srcdoc) with 8 OSM tiles loaded, 15 markers (stations + moving bikes), station labels reflect real Valera streets (Av. Bolívar, Río Motatán, Río Morote, Av. Bicentenaria), simulator pill shows 32 elec / 44 mech / 75 disponibles / 6 en ruta, locate-fab visible and clickable, active-ride banner 'Viaje en curso · Bici M-6523' visible with tap-to-finish. Deprecated RN web warnings persist (shadow*, props.pointerEvents) - already reported in iteration 1, non-blocking.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "global (RN web)", "issue": "Console warning: 'props.pointerEvents is deprecated. Use style.pointerEvents'. Non-blocking; migrate to style.pointerEvents on RN 0.75+ web builds."},
+      {"component": "global (RN web)", "issue": "Console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\"'. Non-blocking; migrate shadow* usages in /app/frontend/src/theme.ts (shadow.card) to boxShadow for web target."}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_bicivalera.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "(Optional, cosmetic) Migrate deprecated shadow*/props.pointerEvents to boxShadow / style.pointerEvents to silence RN web warnings.",
+    "(Nice-to-have) demo@valera.com has an active ride left over from a prior UI test; consider ending it in a startup cleanup or add a 'Cancelar viaje' affordance so the user can start a new one without hitting the '1 activo por usuario' 400 error.",
+    "(Note) Geolocation in preview environment may prompt/deny — locate-fab correctly renders and is tappable; the actual geolocation flow needs to be verified on a real device/Expo Go."
+  ],
+  "critical_code_review_comments": [
+    "/api/impact/trend and /api/achievements correctly require auth (return 401 without token) and consistently exclude MongoDB _id from responses.",
+    "impact_trend builds the 7-day window from today (inclusive) going 6 days back — labels are Spanish weekday abbreviations mapped from date.weekday(), no timezone drift since it uses datetime.now(timezone.utc).date().",
+    "ACHIEVEMENTS list is well-modeled at module level; goal/metric/progress semantics are consistent (progress capped at goal, current reports raw stat).",
+    "impact.tsx uses Promise.all for the three network calls — good latency behavior — but the empty catch (catch {}) swallows all errors silently; consider surfacing an error toast/state so users know when the trend/achievements failed to load.",
+    "profile.tsx theme-selector uses Pressable with correct testIDs and Haptics; setMode is called on the ThemeProvider — persistence verified via AsyncStorage across reloads.",
+    "mapHtml Leaflet iframe successfully embeds OSM tiles and 15 markers; on web the iframe is srcdoc-based which cannot access parent app state, so bike movement/station updates are driven via postMessage from the parent (verify simulator polling continues to feed the iframe with fresh moving_bikes data)."
+  ],
+  "updated_files": ["/app/backend/tests/test_bicivalera.py"],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "100% of iteration-2 flows validated (theme selector + persistence, trend chart, achievements grid, Leaflet map with markers, locate-fab, live simulator, active ride banner)"},
+  "seed_data_creation": "Reused existing backend seed (8 Valera stations + fleet). New TEST_ user created per pytest module run (harmless leftover in Mongo).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend base URL: EXPO_PUBLIC_BACKEND_URL. Demo user demo@valera.com/demo1234 currently has an active ride (leftover from prior UI runs) — call GET /api/rides/active then POST /api/rides/{id}/end to reset. New endpoints: GET /api/impact/trend and GET /api/achievements (both auth-required). Theme mode persists via AsyncStorage under the ThemeProvider. Map is a Leaflet iframe (srcdoc on web / WebView on native) — assert on .leaflet-container inside iframe.content_frame().",
+  "rca_of_issue": "No blocking issues found in this iteration."
+}

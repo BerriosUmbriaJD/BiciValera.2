@@ -386,6 +386,74 @@ async def simulator():
     }
 
 
+@api_router.get("/impact/trend")
+async def impact_trend(user: dict = Depends(get_current_user)):
+    rides = await db.rides.find({"user_id": user["id"], "status": "completed"}).to_list(100000)
+    days = []
+    labels_es = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+    today = datetime.now(timezone.utc).date()
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        km = 0.0
+        co2 = 0.0
+        count = 0
+        for r in rides:
+            try:
+                rd = datetime.fromisoformat(r["started_at"]).date()
+            except Exception:
+                continue
+            if rd == d:
+                km += r.get("distance_km", 0)
+                co2 += r.get("co2_saved_kg", 0)
+                count += 1
+        days.append({
+            "date": d.isoformat(),
+            "label": labels_es[d.weekday()],
+            "km": round(km, 2),
+            "co2": round(co2, 2),
+            "rides": count,
+        })
+    return {"days": days}
+
+
+ACHIEVEMENTS = [
+    {"id": "first_ride", "name": "Primer viaje", "desc": "Completa tu primer recorrido", "icon": "flag", "goal": 1, "metric": "rides"},
+    {"id": "five_rides", "name": "Rodador", "desc": "Completa 5 viajes", "icon": "bicycle", "goal": 5, "metric": "rides"},
+    {"id": "ten_rides", "name": "Ciclista urbano", "desc": "Completa 10 viajes", "icon": "trophy", "goal": 10, "metric": "rides"},
+    {"id": "ten_km", "name": "10 km verdes", "desc": "Recorre 10 km en total", "icon": "map", "goal": 10, "metric": "km"},
+    {"id": "fifty_km", "name": "Maratonista eco", "desc": "Recorre 50 km en total", "icon": "trending-up", "goal": 50, "metric": "km"},
+    {"id": "co2_1", "name": "Aire limpio", "desc": "Evita 1 kg de CO₂", "icon": "leaf", "goal": 1, "metric": "co2"},
+    {"id": "co2_5", "name": "Guardián verde", "desc": "Evita 5 kg de CO₂", "icon": "earth", "goal": 5, "metric": "co2"},
+    {"id": "electric", "name": "Chispa eléctrica", "desc": "Usa una bici eléctrica", "icon": "flash", "goal": 1, "metric": "electric"},
+]
+
+
+@api_router.get("/achievements")
+async def achievements(user: dict = Depends(get_current_user)):
+    rides = await db.rides.find({"user_id": user["id"], "status": "completed"}).to_list(100000)
+    stats = {
+        "rides": len(rides),
+        "km": round(sum(r.get("distance_km", 0) for r in rides), 2),
+        "co2": round(sum(r.get("co2_saved_kg", 0) for r in rides), 2),
+        "electric": sum(1 for r in rides if r.get("bike_type") == "electric"),
+    }
+    result = []
+    for a in ACHIEVEMENTS:
+        current = stats.get(a["metric"], 0)
+        result.append({
+            "id": a["id"],
+            "name": a["name"],
+            "desc": a["desc"],
+            "icon": a["icon"],
+            "goal": a["goal"],
+            "progress": min(current, a["goal"]),
+            "current": current,
+            "unlocked": current >= a["goal"],
+        })
+    unlocked = sum(1 for r in result if r["unlocked"])
+    return {"achievements": result, "unlocked": unlocked, "total": len(result)}
+
+
 @api_router.get("/")
 async def root():
     return {"message": "BiciValera API", "city": "Valera, Estado Trujillo"}

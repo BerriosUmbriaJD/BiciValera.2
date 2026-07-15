@@ -1,40 +1,51 @@
-import React, { useRef, useEffect } from "react";
+import React, { forwardRef, useImperativeHandle, useRef, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import { buildMapHtml } from "@/src/components/mapHtml";
+import { Palette } from "@/src/theme";
 
 type Station = { id: string; name: string; lat: number; lon: number; available: number };
-type MovingBike = { id: string; type: string; lat: number; lon: number };
+type UserLoc = { lat: number; lon: number } | null;
 
-export function MapWebView({
-  stations, movingBikes, onSelect,
-}: {
-  stations: Station[]; movingBikes: MovingBike[]; onSelect: (id: string) => void;
-}) {
+export type MapHandle = { recenter: () => void };
+
+type Props = {
+  stations: Station[];
+  userLoc: UserLoc;
+  c: Palette;
+  isDark: boolean;
+  onSelect: (id: string) => void;
+  onNearest?: (n: { id: string; name: string; distance: number }) => void;
+};
+
+export const MapWebView = forwardRef<MapHandle, Props>(function MapWebView(
+  { stations, userLoc, c, isDark, onSelect, onNearest }, ref
+) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const html = React.useMemo(() => buildMapHtml(stations, movingBikes), [stations.length]);
+  const html = React.useMemo(
+    () => buildMapHtml(stations, c, userLoc, isDark),
+    [stations.length, isDark, userLoc?.lat, userLoc?.lon]
+  );
+
+  useImperativeHandle(ref, () => ({
+    recenter: () => iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ type: "recenter" }), "*"),
+  }));
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       try {
         const data = JSON.parse(e.data);
-        if (data && data.type === "select") onSelect(data.id);
+        if (data?.type === "select") onSelect(data.id);
+        else if (data?.type === "nearest" && onNearest) onNearest(data);
       } catch {}
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [onSelect]);
+  }, [onSelect, onNearest]);
 
-  useEffect(() => {
-    const win = iframeRef.current?.contentWindow;
-    if (win && movingBikes.length) {
-      win.postMessage(JSON.stringify({ type: "bikes", list: movingBikes }), "*");
-    }
-  }, [movingBikes]);
-
-  if (stations.length === 0) return <View style={styles.fill} testID="map-canvas" />;
+  if (stations.length === 0) return <View style={[styles.fill, { backgroundColor: c.mapBg }]} testID="map-canvas" />;
 
   return (
-    <View style={styles.fill} testID="map-canvas">
+    <View style={[styles.fill, { backgroundColor: c.mapBg }]} testID="map-canvas">
       {React.createElement("iframe", {
         ref: iframeRef,
         srcDoc: html,
@@ -43,6 +54,6 @@ export function MapWebView({
       })}
     </View>
   );
-}
+});
 
-const styles = StyleSheet.create({ fill: { flex: 1, backgroundColor: "#DCE7DE" } });
+const styles = StyleSheet.create({ fill: { flex: 1 } });

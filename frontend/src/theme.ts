@@ -1,4 +1,5 @@
-export const colors = {
+export const lightColors = {
+  mode: "light" as const,
   surface: "#F9FAF9",
   onSurface: "#18211A",
   surfaceSecondary: "#FFFFFF",
@@ -23,7 +24,43 @@ export const colors = {
   borderStrong: "#A3B8A9",
   divider: "#E8ECE9",
   muted: "#5F6E63",
+  mapBg: "#DCE7DE",
 };
+
+export const darkColors: typeof lightColors = {
+  mode: "light" as const, // overwritten below
+  surface: "#0E1611",
+  onSurface: "#ECF3EE",
+  surfaceSecondary: "#17221B",
+  onSurfaceSecondary: "#DCE7DE",
+  surfaceTertiary: "#1E2B22",
+  onSurfaceTertiary: "#C4D3C6",
+  surfaceInverse: "#060A07",
+  onSurfaceInverse: "#FFFFFF",
+  brand: "#3BAF6A",
+  brandPrimary: "#2E9D57",
+  onBrandPrimary: "#FFFFFF",
+  brandSecondary: "#43B872",
+  brandTertiary: "#14361F",
+  onBrandTertiary: "#A7E3BE",
+  success: "#34D399",
+  onSuccess: "#06231A",
+  warning: "#FBBF24",
+  error: "#F87171",
+  onError: "#2A0A0A",
+  info: "#2DD4BF",
+  border: "#26332B",
+  borderStrong: "#3E5244",
+  divider: "#202C24",
+  muted: "#8CA093",
+  mapBg: "#1A241D",
+};
+(darkColors as any).mode = "dark";
+
+export type Palette = typeof lightColors;
+
+// Backwards-compatible static export (light) for non-themed modules.
+export const colors = lightColors;
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, "2xl": 32, "3xl": 48 };
 export const radius = { sm: 6, md: 12, lg: 20, pill: 999 };
