@@ -6,7 +6,7 @@ import { Palette } from "@/src/theme";
 type Station = { id: string; name: string; lat: number; lon: number; available: number };
 type UserLoc = { lat: number; lon: number } | null;
 
-export type MapHandle = { recenter: () => void };
+export type MapHandle = { recenter: () => void; update: (payload: any) => void };
 
 type Props = {
   stations: Station[];
@@ -28,6 +28,8 @@ export const MapWebView = forwardRef<MapHandle, Props>(function MapWebView(
 
   useImperativeHandle(ref, () => ({
     recenter: () => iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ type: "recenter" }), "*"),
+    update: (payload: any) =>
+      iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ type: "update", payload }), "*"),
   }));
 
   useEffect(() => {

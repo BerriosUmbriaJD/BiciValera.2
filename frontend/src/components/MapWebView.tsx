@@ -7,7 +7,7 @@ import { Palette } from "@/src/theme";
 type Station = { id: string; name: string; lat: number; lon: number; available: number };
 type UserLoc = { lat: number; lon: number } | null;
 
-export type MapHandle = { recenter: () => void };
+export type MapHandle = { recenter: () => void; update: (payload: any) => void };
 
 type Props = {
   stations: Station[];
@@ -29,6 +29,8 @@ export const MapWebView = forwardRef<MapHandle, Props>(function MapWebView(
 
   useImperativeHandle(ref, () => ({
     recenter: () => webRef.current?.injectJavaScript("window._recenter && window._recenter(); true;"),
+    update: (payload: any) =>
+      webRef.current?.injectJavaScript(`window.__applyUpdate && window.__applyUpdate(${JSON.stringify(payload)}); true;`),
   }));
 
   if (stations.length === 0) return <View style={[styles.fill, { backgroundColor: c.mapBg }]} testID="map-canvas" />;

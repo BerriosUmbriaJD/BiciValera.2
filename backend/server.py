@@ -8,6 +8,8 @@ import logging
 import math
 import random
 import uuid
+import time
+import asyncio
 import jwt
 import bcrypt
 from pathlib import Path
@@ -160,6 +162,118 @@ async def seed_data():
     logger.info("Seed complete.")
 
 
+# ----------------------------- Live fleet simulation engine -----------------------------
+class SimEngine:
+    """In-memory simulation of bikes leaving stations, traveling the streets, and arriving.
+    Keeps per-station availability consistent with in-transit trips."""
+
+    def __init__(self):
+        self.stations = {}      # id -> {id,name,lat,lon,mech,elec}
+        self.trips = []         # active trips
+        self.ready = False
+
+    def seed(self, stations, counts):
+        # stations: list of station docs; counts: {station_id: {"mech":n,"elec":n}}
+        self.stations = {}
+        for s in stations:
+            cid = s["id"]
+            self.stations[cid] = {
+                "id": cid, "name": s["name"], "lat": s["lat"], "lon": s["lon"],
+                "mech": counts.get(cid, {}).get("mech", 0),
+                "elec": counts.get(cid, {}).get("elec", 0),
+            }
+        self.trips = []
+        self.ready = True
+
+    def tick(self):
+        if not self.ready:
+            return
+        now = time.time()
+        # Arrivals: dock bikes that finished their trip
+        for t in self.trips[:]:
+            if now - t["start"] >= t["duration"]:
+                dest = self.stations.get(t["to_id"])
+                if dest:
+                    dest["mech" if t["type"] == "mechanical" else "elec"] += 1
+                self.trips.remove(t)
+        # Departures: spawn new trips so ~8-11 bikes are always moving
+        target = 9
+        guard = 0
+        while len(self.trips) < target and guard < 40:
+            guard += 1
+            origins = [s for s in self.stations.values() if (s["mech"] + s["elec"]) > 0]
+            if len(origins) < 1 or len(self.stations) < 2:
+                break
+            origin = random.choice(origins)
+            btype = "electric" if (origin["elec"] > 0 and (origin["mech"] == 0 or random.random() < 0.4)) else "mechanical"
+            dests = [s for s in self.stations.values() if s["id"] != origin["id"]]
+            dest = random.choice(dests)
+            origin["mech" if btype == "mechanical" else "elec"] -= 1
+            self.trips.append({
+                "id": str(uuid.uuid4())[:8],
+                "type": btype,
+                "from_id": origin["id"], "to_id": dest["id"],
+                "from": {"lat": origin["lat"], "lon": origin["lon"]},
+                "to": {"lat": dest["lat"], "lon": dest["lon"]},
+                "start": now,
+                "duration": random.uniform(16, 42),
+            })
+
+    def station_status(self):
+        return [{
+            "id": s["id"], "name": s["name"], "lat": s["lat"], "lon": s["lon"],
+            "mechanical": s["mech"], "electric": s["elec"], "available": s["mech"] + s["elec"],
+        } for s in self.stations.values()]
+
+    def moving_bikes(self):
+        now = time.time()
+        out = []
+        for t in self.trips:
+            progress = min(1.0, (now - t["start"]) / t["duration"])
+            out.append({
+                "id": t["id"], "type": t["type"],
+                "from_id": t["from_id"], "to_id": t["to_id"],
+                "from": t["from"], "to": t["to"], "progress": round(progress, 3),
+            })
+        return out
+
+    def totals(self):
+        mech_docked = sum(s["mech"] for s in self.stations.values())
+        elec_docked = sum(s["elec"] for s in self.stations.values())
+        mech_transit = sum(1 for t in self.trips if t["type"] == "mechanical")
+        elec_transit = sum(1 for t in self.trips if t["type"] == "electric")
+        return {
+            "available": mech_docked + elec_docked,
+            "in_transit": len(self.trips),
+            "mechanical": mech_docked + mech_transit,
+            "electric": elec_docked + elec_transit,
+            "total_bikes": mech_docked + elec_docked + mech_transit + elec_transit,
+        }
+
+
+sim_engine = SimEngine()
+
+
+async def sim_seed_from_db():
+    stations = await db.stations.find().to_list(1000)
+    counts = {}
+    for s in stations:
+        mech = await db.bikes.count_documents({"station_id": s["id"], "type": "mechanical"})
+        elec = await db.bikes.count_documents({"station_id": s["id"], "type": "electric"})
+        counts[s["id"]] = {"mech": mech, "elec": elec}
+    sim_engine.seed(stations, counts)
+    logger.info("Simulation engine seeded with %d stations.", len(stations))
+
+
+async def sim_loop():
+    while True:
+        try:
+            sim_engine.tick()
+        except Exception as e:
+            logger.error("sim tick error: %s", e)
+        await asyncio.sleep(3)
+
+
 # ----------------------------- Auth routes -----------------------------
 @api_router.post("/auth/register")
 async def register(data: RegisterInput):
@@ -195,6 +309,12 @@ async def me(user: dict = Depends(get_current_user)):
 # ----------------------------- Stations & fleet -----------------------------
 @api_router.get("/stations")
 async def get_stations():
+    if sim_engine.ready:
+        return [{
+            "id": s["id"], "name": s["name"], "lat": s["lat"], "lon": s["lon"],
+            "capacity": s["available"] + 4,
+            "available": s["available"], "mechanical": s["mechanical"], "electric": s["electric"],
+        } for s in sim_engine.station_status()]
     stations = await db.stations.find().to_list(1000)
     result = []
     for s in stations:
@@ -347,40 +467,23 @@ async def get_impact(user: dict = Depends(get_current_user)):
 # ----------------------------- Real-time simulator -----------------------------
 @api_router.get("/simulator")
 async def simulator():
-    total_bikes = await db.bikes.count_documents({})
-    in_use = await db.bikes.count_documents({"status": "in_use"})
-    available = await db.bikes.count_documents({"status": "available"})
-    mech = await db.bikes.count_documents({"type": "mechanical"})
-    elec = await db.bikes.count_documents({"type": "electric"})
-    active_rides = await db.rides.count_documents({"status": "active"})
+    sim_engine.tick()
     users = await db.users.count_documents({})
-
-    # Simulated moving bikes between stations for live map animation
-    stations = await db.stations.find().to_list(1000)
-    moving = []
-    if len(stations) >= 2:
-        for i in range(min(6, len(stations))):
-            a = random.choice(stations)
-            b = random.choice(stations)
-            t = random.random()
-            moving.append({
-                "id": f"sim-{i}",
-                "type": random.choice(["mechanical", "electric"]),
-                "lat": a["lat"] + (b["lat"] - a["lat"]) * t,
-                "lon": a["lon"] + (b["lon"] - a["lon"]) * t,
-            })
-
-    # simulate a little live jitter on active/available counts
-    live_active = active_rides + random.randint(3, 9)
+    active_rides = await db.rides.count_documents({"status": "active"})
+    totals = sim_engine.totals()
+    station_status = sim_engine.station_status()
+    moving = sim_engine.moving_bikes()
     return {
-        "total_bikes": total_bikes,
-        "available": available,
-        "in_use": in_use,
-        "mechanical": mech,
-        "electric": elec,
-        "active_rides": live_active,
-        "stations": len(stations),
+        "total_bikes": totals["total_bikes"],
+        "available": totals["available"],
+        "in_use": totals["in_transit"],
+        "in_transit": totals["in_transit"],
+        "mechanical": totals["mechanical"],
+        "electric": totals["electric"],
+        "active_rides": totals["in_transit"] + active_rides,
+        "stations": len(station_status),
         "users": users + 480,
+        "station_status": station_status,
         "moving_bikes": moving,
         "timestamp": now_iso(),
     }
@@ -476,6 +579,8 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 async def startup_seed():
     await seed_data()
+    await sim_seed_from_db()
+    asyncio.create_task(sim_loop())
 
 
 @app.on_event("shutdown")

@@ -31,13 +31,19 @@ export default function MapScreen() {
     try { setStations(await api.stations()); } catch {}
     setLoading(false);
   };
-  const loadSim = async () => { try { setSim(await api.simulator()); } catch {} };
+  const loadSim = async () => {
+    try {
+      const data = await api.simulator();
+      setSim(data);
+      mapRef.current?.update({ stations: data.station_status, bikes: data.moving_bikes });
+    } catch {}
+  };
   const loadActive = async () => { if (!user) return; try { setActiveRide(await api.activeRide()); } catch {} };
 
   useEffect(() => {
     loadStations();
     loadSim();
-    const t = setInterval(loadSim, 5000);
+    const t = setInterval(loadSim, 2000);
     return () => clearInterval(t);
   }, []);
 
