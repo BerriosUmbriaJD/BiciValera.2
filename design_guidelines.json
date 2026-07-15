@@ -1,0 +1,137 @@
+{
+  "app_name": "BiciValera",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A sleek, map-driven eco-mobility experience that blends real-time utility with an optimistic, sustainable green aesthetic.",
+  "color": {
+    "surface": "#F9FAF9",
+    "onSurface": "#18211A",
+    "surfaceSecondary": "#FFFFFF",
+    "onSurfaceSecondary": "#202D23",
+    "surfaceTertiary": "#EAEFEA",
+    "onSurfaceTertiary": "#2E4133",
+    "surfaceInverse": "#131C15",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#1F7A43",
+    "brandPrimary": "#1F7A43",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#34995A",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#D1F0DB",
+    "onBrandTertiary": "#124B28",
+    "success": "#22C55E",
+    "onSuccess": "#FFFFFF",
+    "warning": "#F59E0B",
+    "onWarning": "#FFFFFF",
+    "error": "#EF4444",
+    "onError": "#FFFFFF",
+    "info": "#14B8A6",
+    "onInfo": "#FFFFFF",
+    "border": "#E2E8E4",
+    "borderStrong": "#A3B8A9",
+    "divider": "#E8ECE9"
+  },
+  "typography": {
+    "displayFontFamily": "Plus Jakarta Sans",
+    "textFontFamily": "Plus Jakarta Sans",
+    "scale": { "sm": 12, "base": 14, "lg": 16, "xl": 20, "2xl": 24 }
+  },
+  "spacing": { 
+    "rule": "Generous iOS-native margins (lg/xl). Use comfortable vertical breathing room. Cards never flush to screen edges.", 
+    "xs": 4, "sm": 8, "md": 12, "lg": 16, "xl": 24, "2xl": 32, "3xl": 48 
+  },
+  "radius_tokens": { "sm": 6, "md": 12, "lg": 20, "pill": 999 },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": "true",
+    "do's": ["Bottom sheet drag handles/headers", "Map overlay components (FABs, sticky filters)", "Bottom tab bar"],
+    "dont's": ["Body content", "List rows", "Form inputs"]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Auth",
+      "purpose": "A welcoming, nature-focused entry point into the BiciValera ecosystem.",
+      "states": {
+        "loading": "Centered brand-tinted spinner over blurred background.",
+        "empty": "N/A",
+        "error": "Standard alert toast styled with error/onError tokens."
+      },
+      "layout": "Hero image at the top with a vertical gradient scrim blending into the surface. Standard form layout below with email/password, oversized primary CTA at the bottom thumb zone (sticky with keyboard avoidance)."
+    },
+    {
+      "name": "Map / Home",
+      "purpose": "Real-time fleet simulator and live map to locate mechanical and electric bikes.",
+      "states": {
+        "loading": "Skeleton UI overlay on map region while fetching stations.",
+        "empty": "Illustration of a parked bike stating 'No bikes available nearby' overlaid on the map.",
+        "error": "Snackbar over map indicating connection lost with a retry button."
+      },
+      "layout": "Full-bleed map interface. Top safe area holds a glassmorphic pill for 'Simulator Status / Active'. Bottom has a floating 'Unlock/Scan' FAB and a pull-up glass bottom sheet detailing the nearest station's bike inventory (mechanical vs. electric)."
+    },
+    {
+      "name": "Impact Dashboard",
+      "purpose": "Visualizes the user's and the city's sustainable mobility impact (CO2 reduced, km traveled).",
+      "states": {
+        "loading": "Skeleton loaders for impact metric cards.",
+        "empty": "Illustration of a small seed with 'Start riding to grow your eco-impact!'.",
+        "error": "Readable error message with a prominent retry button."
+      },
+      "layout": "Scrollable dashboard with high-contrast, oversized metric counters (using the brand typography). A hero card showcasing total CO2 saved with a subtle botanical/leaf background image and a vertical scrim. Grid of smaller stats below (km traveled, rides) using 2-column flex Wrap."
+    },
+    {
+      "name": "Unlock / Scan",
+      "purpose": "Simulated bike rental flow via QR scanner or manual ID entry.",
+      "states": {
+        "loading": "Camera initializing spinner.",
+        "empty": "N/A",
+        "error": "Invalid QR code error screen with clear 'Try Again' primary action."
+      },
+      "layout": "Camera viewfinder takes up the majority of the screen. A dark translucent overlay with a clear center cutout. Bottom sheet contains manual ID input form and a fallback 'Enter Code' sticky primary CTA."
+    }
+  ],
+  "images": {
+    "hero_bike": {
+      "url": "https://images.unsplash.com/photo-1762497403299-b5b68aa08594",
+      "alt": "Three green bicycles parked on a bridge with city buildings"
+    },
+    "hero_leaf_texture": {
+      "url": "https://images.unsplash.com/photo-1683444592479-18f1d9137b91",
+      "alt": "Close up macro view of a green leaf showing veins, used as dashboard texture"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly adhere to the 'Verde/eco' green palette with no blues/indigos.",
+    "Ensure map components (FABs, sticky elements, bottom sheets) utilize the glassmorphism specifications for depth.",
+    "On the Impact Dashboard, use 'hero_leaf_texture' as a background image for the main CO2 card, ensuring a top-to-bottom vertical gradient scrim (transparent to >=70% surfaceInverse) is applied so the metric text remains highly legible.",
+    "Implement the real-time simulator logic as a visually distinct state on the map (e.g., smoothly animated markers or active route lines) emphasizing the 'smart city' narrative.",
+    "Ensure the Unlock flow features a fully immersive camera UI (or mocked camera view) taking safe areas into account.",
+    "All forms must have labels above inputs and the primary CTA sticky at the bottom inside KeyboardAvoidingView."
+  ],
+  "events": {
+    "primary_button_press": "impactLight",
+    "tab_change": "selection",
+    "map_marker_select": "impactMedium",
+    "scan_success": "notificationSuccess"
+  },
+  "haptics": {
+    "events": {
+      "primary_button_press": "impactLight",
+      "tab_change": "selection",
+      "map_marker_select": "impactMedium",
+      "scan_success": "notificationSuccess"
+    }
+  }
+}
