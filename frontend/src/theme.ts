@@ -1,0 +1,51 @@
+export const colors = {
+  surface: "#F9FAF9",
+  onSurface: "#18211A",
+  surfaceSecondary: "#FFFFFF",
+  onSurfaceSecondary: "#202D23",
+  surfaceTertiary: "#EAEFEA",
+  onSurfaceTertiary: "#2E4133",
+  surfaceInverse: "#131C15",
+  onSurfaceInverse: "#FFFFFF",
+  brand: "#1F7A43",
+  brandPrimary: "#1F7A43",
+  onBrandPrimary: "#FFFFFF",
+  brandSecondary: "#34995A",
+  brandTertiary: "#D1F0DB",
+  onBrandTertiary: "#124B28",
+  success: "#22C55E",
+  onSuccess: "#FFFFFF",
+  warning: "#F59E0B",
+  error: "#EF4444",
+  onError: "#FFFFFF",
+  info: "#14B8A6",
+  border: "#E2E8E4",
+  borderStrong: "#A3B8A9",
+  divider: "#E8ECE9",
+  muted: "#5F6E63",
+};
+
+export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, "2xl": 32, "3xl": 48 };
+export const radius = { sm: 6, md: 12, lg: 20, pill: 999 };
+
+export const shadow = {
+  card: {
+    shadowColor: "#0B1F12",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  float: {
+    shadowColor: "#0B1F12",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+};
+
+export const images = {
+  heroBike: "https://images.unsplash.com/photo-1762497403299-b5b68aa08594",
+  heroLeaf: "https://images.unsplash.com/photo-1683444592479-18f1d9137b91",
+};
