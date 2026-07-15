@@ -10,7 +10,7 @@ import { useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { colors, spacing, radius, shadow } from "@/src/theme";
 import { api } from "@/src/lib/api";
-import { MapCanvas } from "@/src/components/MapCanvas";
+import { MapWebView } from "@/src/components/MapWebView";
 import { useAuth } from "@/src/context/auth";
 
 export default function MapScreen() {
@@ -64,16 +64,16 @@ export default function MapScreen() {
           <ActivityIndicator size="large" color={colors.brand} />
         </View>
       ) : (
-        <MapCanvas
-          width={width}
-          height={canvasH}
-          stations={stations}
-          movingBikes={sim?.moving_bikes || []}
-          onSelect={(s) => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            router.push(`/station/${s.id}`);
-          }}
-        />
+        <View style={{ width, height: canvasH }}>
+          <MapWebView
+            stations={stations}
+            movingBikes={sim?.moving_bikes || []}
+            onSelect={(id) => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push(`/station/${id}`);
+            }}
+          />
+        </View>
       )}
 
       {/* Top glass simulator status pill */}
